@@ -1,0 +1,8 @@
+
+@import '../projects/projects.css';
+
+.categories-page {
+  max-width: 1150px;
+  margin: 35px auto;
+  padding: 0 20px;
+}

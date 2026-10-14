@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Angular
+.angular/
+dist/
+coverage/
+
+# Java / Spring Boot
+target/
+build/
+.gradle/
+*.class
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+
+# Logs
+*.log
