@@ -1,0 +1,254 @@
+
+<section class="tasks-page">
+
+  <h1>Task Management</h1>
+  <p>Create, assign, search and manage project tasks.</p>
+
+  <div *ngIf="errorMessage()" class="alert error">
+    {{ errorMessage() }}
+  </div>
+
+  <div *ngIf="successMessage()" class="alert success">
+    {{ successMessage() }}
+  </div>
+
+  <!-- Task Create / Edit -->
+  <div class="card">
+
+    <h2>{{ editingId() === null ? 'Add Task' : 'Edit Task' }}</h2>
+
+    <form (ngSubmit)="saveTask()" [formGroup]="form">
+
+      <div class="form-grid">
+
+        <label>
+          Task Title *
+          <input formControlName="title"
+                 maxlength="150"
+                 placeholder="Implement Task API"
+                 type="text">
+        </label>
+
+        <label>
+          Project *
+          <select formControlName="projectId">
+            <option [ngValue]="0">Select Project</option>
+            <option *ngFor="let project of projects()"
+                    [ngValue]="project.id">
+              {{ project.name }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Category *
+          <select formControlName="categoryId">
+            <option [ngValue]="0">Select Category</option>
+            <option *ngFor="let category of categories()"
+                    [ngValue]="category.id">
+              {{ category.name }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Priority *
+          <select formControlName="priority">
+            <option *ngFor="let priority of priorities"
+                    [value]="priority">
+              {{ priority }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Status *
+          <select formControlName="status">
+            <option *ngFor="let status of statuses"
+                    [value]="status">
+              {{ status }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Due Date
+          <input formControlName="dueDate" type="date">
+        </label>
+
+        <label class="full-width">
+          Description
+          <textarea formControlName="description"
+                    placeholder="Task description"></textarea>
+        </label>
+
+      </div>
+
+      <div class="actions">
+        <button [disabled]="saving()" type="submit">
+          {{
+            saving()
+              ? 'Saving...'
+              : editingId() === null
+                ? 'Create Task'
+                : 'Update Task'
+          }}
+        </button>
+
+        <button (click)="resetForm()" class="secondary"
+                type="button">
+          Cancel / Reset
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Filters -->
+  <div class="card">
+
+    <h2>Search & Filters</h2>
+
+    <form (ngSubmit)="applyFilters()" [formGroup]="filterForm">
+
+      <div class="filter-grid">
+
+        <label>
+          Search by Title
+          <input formControlName="keyword"
+                 placeholder="Search tasks..."
+                 type="text">
+        </label>
+
+        <label>
+          Project
+          <select formControlName="projectId">
+            <option [ngValue]="0">All Projects</option>
+            <option *ngFor="let project of projects()"
+                    [ngValue]="project.id">
+              {{ project.name }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Status
+          <select formControlName="status">
+            <option value="">All Statuses</option>
+            <option *ngFor="let status of statuses"
+                    [value]="status">
+              {{ status }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Priority
+          <select formControlName="priority">
+            <option value="">All Priorities</option>
+            <option *ngFor="let priority of priorities"
+                    [value]="priority">
+              {{ priority }}
+            </option>
+          </select>
+        </label>
+
+      </div>
+
+      <div class="actions">
+        <button type="submit">Apply Filters</button>
+
+        <button (click)="clearFilters()" class="secondary"
+                type="button">
+          Clear Filters
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Task List -->
+  <div class="card">
+
+    <h2>All Tasks</h2>
+
+    <p *ngIf="loading()">Loading tasks...</p>
+
+    <p>Total Tasks: {{ totalElements() }}</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+        <tr>
+          <th>Title</th>
+          <th>Project</th>
+          <th>Category</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Due Date</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+
+        <tbody>
+
+        <tr *ngFor="let task of tasks()">
+          <td>{{ task.title }}</td>
+          <td>{{ task.projectName }}</td>
+          <td>{{ task.categoryName }}</td>
+          <td>{{ task.priority }}</td>
+          <td>{{ task.status }}</td>
+          <td>{{ task.dueDate || '-' }}</td>
+
+          <td>
+            <button (click)="editTask(task)" class="small"
+                    type="button">
+              Edit
+            </button>
+
+            <button (click)="deleteTask(task.id)" [disabled]="deletingId() !== null"
+                    class="small danger"
+                    type="button">
+              {{
+                deletingId() === task.id
+                  ? 'Deleting...'
+                  : 'Delete'
+              }}
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="!loading() && tasks().length === 0">
+          <td colspan="7">No tasks found.</td>
+        </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+
+      <button (click)="previousPage()"
+              [disabled]="page() === 0 || loading()"
+              class="secondary"
+              type="button">
+        Previous
+      </button>
+
+      <span>
+        Page {{ totalPages() === 0 ? 0 : page() + 1 }}
+        of {{ totalPages() }}
+      </span>
+
+      <button (click)="nextPage()"
+              [disabled]="page() + 1 >= totalPages() || loading()"
+              class="secondary"
+              type="button">
+        Next
+      </button>
+
+    </div>
+  </div>
+
+</section>

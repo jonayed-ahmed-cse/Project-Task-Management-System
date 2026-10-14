@@ -1,0 +1,14 @@
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.app-header {
+  background: #0f172a;
+  color: white;
+  padding: 20px 30px;
+  font-size: 18px;
+}

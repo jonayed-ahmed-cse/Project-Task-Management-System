@@ -1,0 +1,218 @@
+
+<section class="projects-page">
+
+  <h1>Project Management</h1>
+  <p>Create, update and manage your projects.</p>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage()" class="alert error" role="alert">
+    {{ errorMessage() }}
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage()" class="alert success" role="status">
+    {{ successMessage() }}
+  </div>
+
+  <!-- Create / Edit Form -->
+  <div class="card">
+
+    <h2>
+      {{ editingId() === null ? 'Add Project' : 'Edit Project' }}
+    </h2>
+
+    <form (ngSubmit)="saveProject()" [formGroup]="form">
+
+      <div class="form-grid">
+
+        <!-- Project Code -->
+        <label>
+          Project Code *
+          <input
+            formControlName="projectCode"
+            maxlength="30"
+            placeholder="PRJ-002"
+            type="text">
+
+          <small
+            *ngIf="
+              form.controls.projectCode.invalid &&
+              form.controls.projectCode.touched
+            "
+            class="field-error">
+            Project code is required (max 30 characters).
+          </small>
+        </label>
+
+        <!-- Project Name -->
+        <label>
+          Project Name *
+          <input
+            formControlName="name"
+            maxlength="150"
+            placeholder="New Project"
+            type="text">
+
+          <small
+            *ngIf="
+              form.controls.name.invalid &&
+              form.controls.name.touched
+            "
+            class="field-error">
+            Project name is required (max 150 characters).
+          </small>
+        </label>
+
+        <!-- Description -->
+        <label>
+          Description
+          <textarea
+            formControlName="description"
+            maxlength="255"
+            placeholder="Project description">
+          </textarea>
+        </label>
+
+        <!-- Status -->
+        <label>
+          Status *
+          <select formControlName="status">
+            <option
+              *ngFor="let status of statuses"
+              [value]="status">
+              {{ status }}
+            </option>
+          </select>
+        </label>
+
+        <!-- Start Date -->
+        <label>
+          Start Date
+          <input
+            formControlName="startDate"
+            type="date">
+        </label>
+
+        <!-- End Date -->
+        <label>
+          End Date
+          <input
+            formControlName="endDate"
+            type="date">
+        </label>
+
+      </div>
+
+      <div class="actions">
+
+        <button
+          [disabled]="saving()"
+          type="submit">
+
+          {{
+            saving()
+              ? 'Saving...'
+              : editingId() === null
+                ? 'Create Project'
+                : 'Update Project'
+          }}
+
+        </button>
+
+        <button
+          (click)="resetForm()"
+          [disabled]="saving()"
+          class="secondary"
+          type="button">
+          Cancel / Reset
+        </button>
+
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Projects Table -->
+  <div class="card">
+
+    <h2>All Projects</h2>
+
+    <p>
+      DEBUG:
+      Loading = {{ loading() }},
+      Saving = {{ saving() }},
+      Projects = {{ projects().length }}
+    </p>
+
+    <p *ngIf="loading()">Loading...</p>
+
+    <div class="table-wrapper">
+
+      <table>
+        <thead>
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+
+        <tbody>
+
+        <tr *ngFor="let project of projects()">
+
+          <td>{{ project.projectCode }}</td>
+
+          <td>{{ project.name }}</td>
+
+          <td>{{ project.status }}</td>
+
+          <td>{{ project.startDate || '-' }}</td>
+
+          <td>{{ project.endDate || '-' }}</td>
+
+          <td>
+
+            <button
+              (click)="editProject(project)"
+              [disabled]="deletingId() !== null"
+              class="small"
+              type="button">
+              Edit
+            </button>
+
+            <button
+              (click)="deleteProject(project.id)"
+              [disabled]="deletingId() !== null"
+              class="small danger"
+              type="button">
+
+              {{
+                deletingId() === project.id
+                  ? 'Deleting...'
+                  : 'Delete'
+              }}
+
+            </button>
+
+          </td>
+
+        </tr>
+
+        <!-- Empty State -->
+        <tr *ngIf="!loading() && projects().length === 0">
+          <td colspan="6">
+            No projects found.
+          </td>
+        </tr>
+
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+</section>
