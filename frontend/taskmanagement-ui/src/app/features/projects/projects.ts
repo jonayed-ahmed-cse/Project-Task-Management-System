@@ -1,8 +1,8 @@
-import { Router, ActivatedRoute } from '@angular/router';
 
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { computed } from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
@@ -41,11 +41,25 @@ export class Projects implements OnInit {
   ];
   private projectService = inject(ProjectService);
   private fb = inject(FormBuilder);
-  private router = inject(Router);
   private route = inject(ActivatedRoute);
-  formMode = signal(false);
+  private router = inject(Router);
+  formMode = this.route.snapshot.routeConfig?.path !== 'projects';
+  isEdit = this.route.snapshot.routeConfig?.path === 'projects/:id/edit';
+  detail = signal<Project | null>(null);
   search = signal('');
   statusFilter = signal('');
+  visibleProjects = computed(() => this.filtered().filter(p => !this.statusFilter() || p.status === this.statusFilter()));
+  filtered = computed(() => this.projects().filter(item => JSON.stringify(item).toLowerCase().includes(this.search().trim().toLowerCase())));
+  openDetails(item: Project): void { this.detail.set(item); }
+  closeDetails(): void { this.detail.set(null); }
+  goEdit(item: Project): void { this.router.navigate(['/projects', item.id, 'edit']); }
+  private loadEditRecord(): void {
+    if (!this.isEdit) return;
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    const item = this.projects().find(x => x.id === id);
+    if (item) this.editProject(item);
+    else this.errorMessage.set('Record not found. It may have been deleted.');
+  }
 
   // Reactive Form
   form = this.fb.nonNullable.group({
@@ -69,23 +83,7 @@ export class Projects implements OnInit {
     ]
   });
 
-  filteredItems = computed(() => this.projects().filter(item => {
-    const query = this.search().trim().toLowerCase();
-    const matchesText = !query || item.name + " " + item.projectCode + " " + (item.description || "").toLowerCase().includes(query);
-    return matchesText && (!this.statusFilter() || item.status === this.statusFilter());
-  }));
-
   ngOnInit(): void {
-    const url = this.router.url.split('?')[0];
-    this.formMode.set(url.endsWith('/new') || url.endsWith('/edit'));
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (this.formMode() && url.endsWith('/edit') && Number.isInteger(id) && id > 0) {
-      this.projectService.getById(id).subscribe({
-        next: item => this.editProject(item),
-        error: () => this.errorMessage.set('Project not found or could not be loaded')
-      });
-    }
-
     this.loadProjects();
   }
 
@@ -102,6 +100,7 @@ export class Projects implements OnInit {
         console.log('Projects received:', data);
 
         this.projects.set(data);
+        this.loadEditRecord();
         this.loading.set(false);
 
         console.log('Loading state:', this.loading());
@@ -182,7 +181,6 @@ export class Projects implements OnInit {
         this.resetForm();
         this.saving.set(false);
         this.router.navigate(['/projects']);
-        this.loadProjects();
       },
       error: (error) => {
         console.error('Failed to save project:', error);
@@ -198,7 +196,6 @@ export class Projects implements OnInit {
 
   // Populate form for editing
   editProject(project: Project): void {
-    if (!this.formMode()) { this.router.navigate(['/projects', project.id, 'edit']); return; }
     this.editingId.set(project.id);
 
     this.errorMessage.set('');
@@ -213,10 +210,7 @@ export class Projects implements OnInit {
       status: project.status
     });
 
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+
   }
 
   // DELETE /api/projects/{id}
@@ -263,8 +257,6 @@ export class Projects implements OnInit {
   }
 
   // Reset form and return to Create Mode
-  routerNavigateToList(): void { this.router.navigate(['/projects']); }
-
   resetForm(): void {
     this.editingId.set(null);
 

@@ -13,7 +13,7 @@ export class App {
   collapsed = signal(false);
   mobileOpen = signal(false);
   path = signal(this.router.url.split('?')[0]);
-  title = computed(() => { const titles: Record<string,string> = {dashboard:'Dashboard',projects:'Projects',tasks:'Tasks',categories:'Task Categories'}; return titles[this.path().split('/')[1]] || 'Dashboard'; });
+  title = computed(() => ({ dashboard: 'Dashboard', projects: 'Projects', tasks: 'Tasks', categories: 'Categories' } as Record<string,string>)[this.path().split('/')[1]] || 'Dashboard');
 
   constructor() {
     this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))

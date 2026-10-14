@@ -21,24 +21,30 @@ export class Dashboard implements OnInit {
   projects = signal<Project[]>([]);
   tasks = signal<Task[]>([]);
   categoryCount = signal(0);
-  selectedProjectId = signal(0);
-  visibleTasks = computed(() => this.selectedProjectId() ? this.tasks().filter(t => t.projectId === this.selectedProjectId()) : this.tasks());
   loading = signal(true);
   error = signal('');
-  completed = computed(() => this.visibleTasks().filter(t => t.status === 'COMPLETED').length);
-  inProgress = computed(() => this.visibleTasks().filter(t => t.status === 'IN_PROGRESS').length);
-  pending = computed(() => this.visibleTasks().filter(t => t.status === 'PENDING').length);
-  completionRate = computed(() => this.visibleTasks().length ? Math.round(this.completed() * 100 / this.visibleTasks().length) : 0);
-  recentTasks = computed(() => [...this.visibleTasks()].sort((a,b) => b.id - a.id).slice(0,6));
-  recentProjects = computed(() => [...this.projects()].sort((a,b) => b.id - a.id).slice(0,4));
+  selectedProject = signal(0);
+  selectedStatus = signal('');
+  filteredTasks = computed(() => this.tasks().filter(t =>
+    (!this.selectedProject() || t.projectId === this.selectedProject()) &&
+    (!this.selectedStatus() || t.status === this.selectedStatus())
+  ));
+  filteredProjects = computed(() => this.selectedProject()
+    ? this.projects().filter(p => p.id === this.selectedProject()) : this.projects());
+  completed = computed(() => this.filteredTasks().filter(t => t.status === 'COMPLETED').length);
+  inProgress = computed(() => this.filteredTasks().filter(t => t.status === 'IN_PROGRESS').length);
+  pending = computed(() => this.filteredTasks().filter(t => t.status === 'PENDING').length);
+  completionRate = computed(() => this.filteredTasks().length ? Math.round(this.completed() * 100 / this.filteredTasks().length) : 0);
+  recentTasks = computed(() => [...this.filteredTasks()].sort((a,b) => b.id - a.id).slice(0,6));
+  recentProjects = computed(() => [...this.filteredProjects()].sort((a,b) => b.id - a.id).slice(0,4));
   upcoming = computed(() => {
     const today = new Date().toISOString().slice(0,10);
-    return this.visibleTasks().filter(t => t.dueDate && t.dueDate >= today && t.status !== 'COMPLETED')
+    return this.filteredTasks().filter(t => t.dueDate && t.dueDate >= today && t.status !== 'COMPLETED')
       .sort((a,b) => (a.dueDate || '').localeCompare(b.dueDate || '')).slice(0,5);
   });
   overdue = computed(() => {
     const today = new Date().toISOString().slice(0,10);
-    return this.visibleTasks().filter(t => t.dueDate && t.dueDate < today && t.status !== 'COMPLETED').length;
+    return this.filteredTasks().filter(t => t.dueDate && t.dueDate < today && t.status !== 'COMPLETED').length;
   });
 
   ngOnInit(): void { this.load(); }

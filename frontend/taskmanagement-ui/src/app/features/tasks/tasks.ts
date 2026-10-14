@@ -1,8 +1,8 @@
-import { Router, ActivatedRoute } from '@angular/router';
 
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { computed } from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
@@ -61,11 +61,23 @@ export class Tasks implements OnInit {
   private projectService = inject(ProjectService);
   private categoryService = inject(CategoryService);
   private fb = inject(FormBuilder);
-  private router = inject(Router);
   private route = inject(ActivatedRoute);
-  formMode = signal(false);
+  private router = inject(Router);
+  formMode = this.route.snapshot.routeConfig?.path !== 'tasks';
+  isEdit = this.route.snapshot.routeConfig?.path === 'tasks/:id/edit';
+  detail = signal<Task | null>(null);
   search = signal('');
-  statusFilter = signal('');
+  filtered = computed(() => this.tasks().filter(item => JSON.stringify(item).toLowerCase().includes(this.search().trim().toLowerCase())));
+  openDetails(item: Task): void { this.detail.set(item); }
+  closeDetails(): void { this.detail.set(null); }
+  goEdit(item: Task): void { this.router.navigate(['/tasks', item.id, 'edit']); }
+  private loadEditRecord(): void {
+    if (!this.isEdit) return;
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    const item = this.tasks().find(x => x.id === id);
+    if (item) this.editTask(item);
+    else this.errorMessage.set('Record not found. It may have been deleted.');
+  }
 
   form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(150)]],
@@ -85,18 +97,14 @@ export class Tasks implements OnInit {
   });
 
   ngOnInit(): void {
-    const url = this.router.url.split('?')[0];
-    this.formMode.set(url.endsWith('/new') || url.endsWith('/edit'));
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (this.formMode() && url.endsWith('/edit') && Number.isInteger(id) && id > 0) {
-      this.taskService.getById(id).subscribe({
-        next: item => this.editTask(item),
-        error: () => this.errorMessage.set('Task not found or could not be loaded')
-      });
-    }
-
     this.loadDropdowns();
-    this.loadTasks();
+    if (this.isEdit) {
+      const id = Number(this.route.snapshot.paramMap.get('id'));
+      this.taskService.getById(id).subscribe({
+        next: task => this.editTask(task),
+        error: () => this.errorMessage.set('Task not found or could not be loaded.')
+      });
+    } else this.loadTasks();
   }
 
   loadDropdowns(): void {
@@ -132,6 +140,7 @@ export class Tasks implements OnInit {
     }).subscribe({
       next: (response) => {
         this.tasks.set(response.content);
+
         this.totalPages.set(response.totalPages);
         this.totalElements.set(response.totalElements);
         this.loading.set(false);
@@ -222,9 +231,8 @@ export class Tasks implements OnInit {
 
         this.resetForm();
         this.saving.set(false);
-        this.router.navigate(['/tasks']);
         this.page.set(0);
-        this.loadTasks();
+        this.router.navigate(['/tasks']);
       },
       error: (error) => {
         console.error(error);
@@ -237,7 +245,6 @@ export class Tasks implements OnInit {
   }
 
   editTask(task: Task): void {
-    if (!this.formMode()) { this.router.navigate(['/tasks', task.id, 'edit']); return; }
     this.editingId.set(task.id);
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -252,7 +259,7 @@ export class Tasks implements OnInit {
       categoryId: task.categoryId
     });
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
   }
 
   deleteTask(id: number): void {
@@ -291,8 +298,6 @@ export class Tasks implements OnInit {
       }
     });
   }
-
-  routerNavigateToList(): void { this.router.navigate(['/tasks']); }
 
   resetForm(): void {
     this.editingId.set(null);

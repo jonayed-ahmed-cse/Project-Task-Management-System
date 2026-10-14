@@ -1,108 +1,22 @@
-
-<section class="categories-page">
-
-  <h1>Category Management</h1>
-  <p>Create and manage task categories.</p>
-
-  <div *ngIf="errorMessage()" class="alert error">
-    {{ errorMessage() }}
-  </div>
-
-  <div *ngIf="successMessage()" class="alert success">
-    {{ successMessage() }}
-  </div>
-
-  @if (formMode()) {
-<div class="editor-toolbar"><a routerLink="/categories" class="back-link">← Back to Categories</a><h2>{{ editingId() === null ? "Create Category" : "Edit Category" }}</h2></div>
-  <div class="card">
-    <h2>{{ editingId() === null ? 'Add Category' : 'Edit Category' }}</h2>
-
-    <form (ngSubmit)="saveCategory()" [formGroup]="form">
-
-      <div class="form-grid">
-        <label>
-          Category Name *
-          <input
-            formControlName="name"
-            placeholder="Development"
-            type="text">
-        </label>
-
-        <label>
-          Description
-          <input
-            formControlName="description"
-            placeholder="Category description"
-            type="text">
-        </label>
-      </div>
-
-      <div class="actions">
-        <button [disabled]="saving()" type="submit">
-          {{ editingId() === null ? 'Create Category' : 'Update Category' }}
-        </button>
-
-        <button (click)="routerNavigateToList()"
-                class="secondary"
-                type="button">
-          Cancel / Reset
-        </button>
-      </div>
-
-    </form>
-  </div>
-
-  } @else {
-<div class="listing-toolbar">
-  <div><h2>All Categories</h2><p>Manage and organize your categories.</p></div>
-  <a class="new-record-btn" routerLink="/categories/new">+ New Category</a>
-</div>
-<div class="listing-filters"><label>Search
-  <input #queryInput type="search" placeholder="Search records..." [value]="search()" (input)="search.set(queryInput.value)" />
-</label></div>
-  <div class="card">
-    <h2>All Categories</h2>
-
-    <p *ngIf="loading()">Loading...</p>
-
-    <div class="table-wrapper">
-      <table>
-        <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Actions</th>
-        </tr>
-        </thead>
-
-        <tbody>
-        <tr *ngFor="let category of filteredItems()">
-          <td>{{ category.id }}</td>
-          <td>{{ category.name }}</td>
-          <td>{{ category.description || '-' }}</td>
-          <td>
-            <button (click)="editCategory(category)"
-                    class="small"
-                    type="button">
-              Edit
-            </button>
-
-            <button (click)="deleteCategory(category.id)"
-                    class="small danger"
-                    type="button">
-              Delete
-            </button>
-          </td>
-        </tr>
-
-        <tr *ngIf="!loading() && filteredItems().length === 0">
-          <td colspan="4">No categories found.</td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  }
+<section class="management-page">
+@if (!formMode) {
+  <header class="management-header"><div><p class="eyebrow">WORKSPACE / CATEGORIES</p><h1>Categories</h1><p>Organize and manage your categories in one place.</p></div><a class="primary-action add-link" routerLink="/categories/new">＋ Add Category</a></header>
+  @if(errorMessage()){<div class="notice error" role="alert">{{errorMessage()}}</div>}
+  @if(successMessage()){<div class="notice success" role="status">{{successMessage()}}</div>}
+  <section class="management-card filter-card"><div class="card-heading"><h2>Search &amp; filters</h2><span>Refine results</span></div><div class="filter-form"><label>Search categories<input [value]="search()" (input)="search.set($any($event.target).value)" placeholder="Search categories..."></label><button type="button" class="neutral-action" (click)="search.set('');closeDetails()">Reset</button></div></section>
+  <section class="management-card"><div class="card-heading"><div><h2>All Categories</h2><span>{{filtered().length}} records</span></div></div>
+    @if(loading()){<p class="state-message" role="status">Loading categories...</p>}
+    <div class="table-scroll"><table><thead><tr><th>NAME</th><th>DESCRIPTION PREVIEW</th><th class="actions-head">ACTIONS</th></tr></thead><tbody>
+      @for(category of filtered();track category.id){<tr><td class="strong">{{category.name}}</td><td class="truncate">{{category.description || '—'}}</td><td class="row-actions"><button type="button" class="icon-action" title="View details" aria-label="View details" (click)="openDetails(category)">◉</button><button type="button" class="icon-action" title="Edit" aria-label="Edit" (click)="goEdit(category)">✎</button><button type="button" class="icon-action danger-icon" title="Delete" aria-label="Delete" [disabled]="deletingId() !== null" (click)="deleteCategory(category.id)">✕</button></td></tr>}
+      @empty{@if(!loading()){<tr><td colspan="8" class="state-message">No categories found. Try adjusting your filters or create one.</td></tr>}}
+    </tbody></table></div>
+  </section>
+} @else {
+  <header class="management-header"><div><p class="eyebrow">WORKSPACE / CATEGORIES / {{isEdit ? 'EDIT' : 'NEW'}}</p><h1>{{isEdit ? 'Edit Category' : 'Create Category'}}</h1><p>Fill in the information below. Fields marked * are required.</p></div><a class="neutral-action add-link" routerLink="/categories">← Back to Categories</a></header>
+  @if(errorMessage()){<div class="notice error" role="alert">{{errorMessage()}}</div>}
+  <section class="management-card form-card"><form [formGroup]="form" (ngSubmit)="saveCategory()"><div class="card-heading"><h2>Category information</h2></div><div class="edit-grid"><label>Category name *<input formControlName="name" maxlength="100" placeholder="e.g. Development"></label><label class="wide">Description<textarea formControlName="description" maxlength="255" rows="5" placeholder="What tasks belong to this category?"></textarea></label></div>
+    @if(form.invalid && form.touched){<p class="field-hint">Please complete the required fields and check field lengths.</p>}
+    <div class="form-footer"><a class="neutral-action" routerLink="/categories">Cancel</a><button class="primary-action" type="submit" [disabled]="saving()">{{saving() ? 'Saving...' : isEdit ? 'Save changes' : 'Create Category'}}</button></div></form></section>
+}
+@if(detail()){<div class="modal-backdrop" (click)="closeDetails()"><section class="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title" (click)="$event.stopPropagation()"><header class="dialog-head"><div><p class="eyebrow">CATEGORY DETAILS</p><h2 id="detail-title">{{ detail()!.name }}</h2></div><button class="icon-action" type="button" aria-label="Close details" (click)="closeDetails()">✕</button></header><dl class="detail-list"><dt>Category name</dt><dd>{{detail()!.name}}</dd></dl><div class="description-block"><h3>Description</h3><p>{{detail()!.description || 'No description provided.'}}</p></div><footer class="dialog-footer"><button class="neutral-action" type="button" (click)="closeDetails()">Close</button><button class="primary-action" type="button" (click)="goEdit(detail()!)">✎ Edit Category</button></footer></section></div>}
 </section>

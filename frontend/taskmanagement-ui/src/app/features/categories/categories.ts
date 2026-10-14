@@ -1,8 +1,8 @@
-import { Router, ActivatedRoute } from '@angular/router';
 
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { computed } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { CategoryService } from '../../core/services/category.service';
@@ -21,38 +21,35 @@ export class Categories implements OnInit {
   editingId = signal<number | null>(null);
   loading = signal(false);
   saving = signal(false);
+  deletingId = signal<number | null>(null);
   errorMessage = signal('');
   successMessage = signal('');
   private service = inject(CategoryService);
   private fb = inject(FormBuilder);
-  private router = inject(Router);
   private route = inject(ActivatedRoute);
-  formMode = signal(false);
+  private router = inject(Router);
+  formMode = this.route.snapshot.routeConfig?.path !== 'categories';
+  isEdit = this.route.snapshot.routeConfig?.path === 'categories/:id/edit';
+  detail = signal<TaskCategory | null>(null);
   search = signal('');
-  statusFilter = signal('');
+  filtered = computed(() => this.categories().filter(item => JSON.stringify(item).toLowerCase().includes(this.search().trim().toLowerCase())));
+  openDetails(item: TaskCategory): void { this.detail.set(item); }
+  closeDetails(): void { this.detail.set(null); }
+  goEdit(item: TaskCategory): void { this.router.navigate(['/categories', item.id, 'edit']); }
+  private loadEditRecord(): void {
+    if (!this.isEdit) return;
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    const item = this.categories().find(x => x.id === id);
+    if (item) this.editCategory(item);
+    else this.errorMessage.set('Record not found. It may have been deleted.');
+  }
 
   form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
     description: ['', Validators.maxLength(255)]
   });
 
-  filteredItems = computed(() => this.categories().filter(item => {
-    const query = this.search().trim().toLowerCase();
-    const matchesText = !query || item.name + " " + (item.description || "").toLowerCase().includes(query);
-    return matchesText;
-  }));
-
   ngOnInit(): void {
-    const url = this.router.url.split('?')[0];
-    this.formMode.set(url.endsWith('/new') || url.endsWith('/edit'));
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (this.formMode() && url.endsWith('/edit') && Number.isInteger(id) && id > 0) {
-      this.service.getById(id).subscribe({
-        next: item => this.editCategory(item),
-        error: () => this.errorMessage.set('Category not found or could not be loaded')
-      });
-    }
-
     this.loadCategories();
   }
 
@@ -65,6 +62,7 @@ export class Categories implements OnInit {
         console.log('Categories received:', data);
 
         this.categories.set(data);
+        this.loadEditRecord();
         this.loading.set(false);
       },
       error: (error) => {
@@ -118,7 +116,6 @@ export class Categories implements OnInit {
         this.resetForm();
         this.saving.set(false);
         this.router.navigate(['/categories']);
-        this.loadCategories();
       },
       error: (error) => {
         this.errorMessage.set(
@@ -130,7 +127,6 @@ export class Categories implements OnInit {
   }
 
   editCategory(category: TaskCategory): void {
-    if (!this.formMode()) { this.router.navigate(['/categories', category.id, 'edit']); return; }
     this.editingId.set(category.id);
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -142,27 +138,28 @@ export class Categories implements OnInit {
   }
 
   deleteCategory(id: number): void {
-    if (!confirm('Delete this category?')) {
+    if (this.deletingId() !== null || !confirm('Delete this category?')) {
       return;
     }
 
     this.errorMessage.set('');
     this.successMessage.set('');
 
+    this.deletingId.set(id);
     this.service.delete(id).subscribe({
       next: () => {
+        this.deletingId.set(null);
         this.successMessage.set('Category deleted successfully');
         this.loadCategories();
       },
       error: (error) => {
+        this.deletingId.set(null);
         this.errorMessage.set(
           error.error?.message || 'Failed to delete category'
         );
       }
     });
   }
-
-  routerNavigateToList(): void { this.router.navigate(['/categories']); }
 
   resetForm(): void {
     this.editingId.set(null);
