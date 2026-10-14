@@ -9,22 +9,11 @@ import { filter } from 'rxjs';
   styleUrl: './app.css'
 })
 export class App {
+  private router = inject(Router);
   collapsed = signal(false);
   mobileOpen = signal(false);
-  title = computed(() => {
-  const titles: Record<string, string> = {
-    dashboard: 'Dashboard',
-    projects: 'Projects',
-    tasks: 'Tasks',
-    categories: 'Task Categories'
-  };
-
-  const currentRoute = this.path().split('/')[1];
-
-  return titles[currentRoute] || 'Dashboard';
-});
-  private router = inject(Router);
   path = signal(this.router.url.split('?')[0]);
+  title = computed(() => { const titles: Record<string,string> = {dashboard:'Dashboard',projects:'Projects',tasks:'Tasks',categories:'Task Categories'}; return titles[this.path().split('/')[1]] || 'Dashboard'; });
 
   constructor() {
     this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))

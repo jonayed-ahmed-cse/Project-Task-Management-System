@@ -13,6 +13,8 @@
   </div>
 
   <!-- Task Create / Edit -->
+  @if (formMode()) {
+<div class="editor-toolbar"><a routerLink="/tasks" class="back-link">← Back to Tasks</a><h2>{{ editingId() === null ? "Create Task" : "Edit Task" }}</h2></div>
   <div class="card">
 
     <h2>{{ editingId() === null ? 'Add Task' : 'Edit Task' }}</h2>
@@ -95,7 +97,7 @@
           }}
         </button>
 
-        <button (click)="resetForm()" class="secondary"
+        <button (click)="routerNavigateToList()" class="secondary"
                 type="button">
           Cancel / Reset
         </button>
@@ -105,6 +107,11 @@
   </div>
 
   <!-- Filters -->
+  } @else {
+<div class="listing-toolbar">
+  <div><h2>All Tasks</h2><p>Manage and organize your tasks.</p></div>
+  <a class="new-record-btn" routerLink="/tasks/new">+ New Task</a>
+</div>
   <div class="card">
 
     <h2>Search & Filters</h2>
@@ -251,4 +258,5 @@
     </div>
   </div>
 
+  }
 </section>

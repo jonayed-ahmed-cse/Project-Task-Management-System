@@ -1,6 +1,8 @@
+import { Router, ActivatedRoute } from '@angular/router';
 
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { CategoryService } from '../../core/services/category.service';
@@ -9,7 +11,7 @@ import { TaskCategory, CategoryRequest } from '../../models/category.model';
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './categories.html',
   styleUrl: './categories.css'
 })
@@ -23,12 +25,34 @@ export class Categories implements OnInit {
   successMessage = signal('');
   private service = inject(CategoryService);
   private fb = inject(FormBuilder);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  formMode = signal(false);
+  search = signal('');
+  statusFilter = signal('');
+
   form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
     description: ['', Validators.maxLength(255)]
   });
 
+  filteredItems = computed(() => this.categories().filter(item => {
+    const query = this.search().trim().toLowerCase();
+    const matchesText = !query || item.name + " " + (item.description || "").toLowerCase().includes(query);
+    return matchesText;
+  }));
+
   ngOnInit(): void {
+    const url = this.router.url.split('?')[0];
+    this.formMode.set(url.endsWith('/new') || url.endsWith('/edit'));
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    if (this.formMode() && url.endsWith('/edit') && Number.isInteger(id) && id > 0) {
+      this.service.getById(id).subscribe({
+        next: item => this.editCategory(item),
+        error: () => this.errorMessage.set('Category not found or could not be loaded')
+      });
+    }
+
     this.loadCategories();
   }
 
@@ -93,6 +117,7 @@ export class Categories implements OnInit {
 
         this.resetForm();
         this.saving.set(false);
+        this.router.navigate(['/categories']);
         this.loadCategories();
       },
       error: (error) => {
@@ -105,6 +130,7 @@ export class Categories implements OnInit {
   }
 
   editCategory(category: TaskCategory): void {
+    if (!this.formMode()) { this.router.navigate(['/categories', category.id, 'edit']); return; }
     this.editingId.set(category.id);
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -135,6 +161,8 @@ export class Categories implements OnInit {
       }
     });
   }
+
+  routerNavigateToList(): void { this.router.navigate(['/categories']); }
 
   resetForm(): void {
     this.editingId.set(null);

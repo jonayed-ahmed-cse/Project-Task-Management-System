@@ -1,6 +1,8 @@
+import { Router, ActivatedRoute } from '@angular/router';
 
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import {
   FormBuilder,
   ReactiveFormsModule,
@@ -17,7 +19,7 @@ import {
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './projects.html',
   styleUrl: './projects.css'
 })
@@ -39,6 +41,12 @@ export class Projects implements OnInit {
   ];
   private projectService = inject(ProjectService);
   private fb = inject(FormBuilder);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  formMode = signal(false);
+  search = signal('');
+  statusFilter = signal('');
+
   // Reactive Form
   form = this.fb.nonNullable.group({
     projectCode: [
@@ -61,7 +69,23 @@ export class Projects implements OnInit {
     ]
   });
 
+  filteredItems = computed(() => this.projects().filter(item => {
+    const query = this.search().trim().toLowerCase();
+    const matchesText = !query || item.name + " " + item.projectCode + " " + (item.description || "").toLowerCase().includes(query);
+    return matchesText && (!this.statusFilter() || item.status === this.statusFilter());
+  }));
+
   ngOnInit(): void {
+    const url = this.router.url.split('?')[0];
+    this.formMode.set(url.endsWith('/new') || url.endsWith('/edit'));
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    if (this.formMode() && url.endsWith('/edit') && Number.isInteger(id) && id > 0) {
+      this.projectService.getById(id).subscribe({
+        next: item => this.editProject(item),
+        error: () => this.errorMessage.set('Project not found or could not be loaded')
+      });
+    }
+
     this.loadProjects();
   }
 
@@ -157,6 +181,7 @@ export class Projects implements OnInit {
 
         this.resetForm();
         this.saving.set(false);
+        this.router.navigate(['/projects']);
         this.loadProjects();
       },
       error: (error) => {
@@ -173,6 +198,7 @@ export class Projects implements OnInit {
 
   // Populate form for editing
   editProject(project: Project): void {
+    if (!this.formMode()) { this.router.navigate(['/projects', project.id, 'edit']); return; }
     this.editingId.set(project.id);
 
     this.errorMessage.set('');
@@ -237,6 +263,8 @@ export class Projects implements OnInit {
   }
 
   // Reset form and return to Create Mode
+  routerNavigateToList(): void { this.router.navigate(['/projects']); }
+
   resetForm(): void {
     this.editingId.set(null);
 

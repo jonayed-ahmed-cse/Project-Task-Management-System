@@ -1,6 +1,8 @@
+import { Router, ActivatedRoute } from '@angular/router';
 
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import {
   FormBuilder,
   ReactiveFormsModule,
@@ -26,7 +28,7 @@ import { TaskCategory } from '../../models/category.model';
 @Component({
   selector: 'app-tasks',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './tasks.html',
   styleUrl: './tasks.css'
 })
@@ -59,6 +61,12 @@ export class Tasks implements OnInit {
   private projectService = inject(ProjectService);
   private categoryService = inject(CategoryService);
   private fb = inject(FormBuilder);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  formMode = signal(false);
+  search = signal('');
+  statusFilter = signal('');
+
   form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(150)]],
     description: [''],
@@ -77,6 +85,16 @@ export class Tasks implements OnInit {
   });
 
   ngOnInit(): void {
+    const url = this.router.url.split('?')[0];
+    this.formMode.set(url.endsWith('/new') || url.endsWith('/edit'));
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    if (this.formMode() && url.endsWith('/edit') && Number.isInteger(id) && id > 0) {
+      this.taskService.getById(id).subscribe({
+        next: item => this.editTask(item),
+        error: () => this.errorMessage.set('Task not found or could not be loaded')
+      });
+    }
+
     this.loadDropdowns();
     this.loadTasks();
   }
@@ -204,6 +222,7 @@ export class Tasks implements OnInit {
 
         this.resetForm();
         this.saving.set(false);
+        this.router.navigate(['/tasks']);
         this.page.set(0);
         this.loadTasks();
       },
@@ -218,6 +237,7 @@ export class Tasks implements OnInit {
   }
 
   editTask(task: Task): void {
+    if (!this.formMode()) { this.router.navigate(['/tasks', task.id, 'edit']); return; }
     this.editingId.set(task.id);
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -271,6 +291,8 @@ export class Tasks implements OnInit {
       }
     });
   }
+
+  routerNavigateToList(): void { this.router.navigate(['/tasks']); }
 
   resetForm(): void {
     this.editingId.set(null);

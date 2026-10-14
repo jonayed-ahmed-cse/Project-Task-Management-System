@@ -15,29 +15,31 @@ import { Task } from '../../models/task.model';
   styleUrl: './dashboard.css'
 })
 export class Dashboard implements OnInit {
+  private projectService = inject(ProjectService);
+  private categoryService = inject(CategoryService);
+  private taskService = inject(TaskService);
   projects = signal<Project[]>([]);
   tasks = signal<Task[]>([]);
   categoryCount = signal(0);
+  selectedProjectId = signal(0);
+  visibleTasks = computed(() => this.selectedProjectId() ? this.tasks().filter(t => t.projectId === this.selectedProjectId()) : this.tasks());
   loading = signal(true);
   error = signal('');
-  completed = computed(() => this.tasks().filter(t => t.status === 'COMPLETED').length);
-  inProgress = computed(() => this.tasks().filter(t => t.status === 'IN_PROGRESS').length);
-  pending = computed(() => this.tasks().filter(t => t.status === 'PENDING').length);
-  completionRate = computed(() => this.tasks().length ? Math.round(this.completed() * 100 / this.tasks().length) : 0);
-  recentTasks = computed(() => [...this.tasks()].sort((a,b) => b.id - a.id).slice(0,6));
+  completed = computed(() => this.visibleTasks().filter(t => t.status === 'COMPLETED').length);
+  inProgress = computed(() => this.visibleTasks().filter(t => t.status === 'IN_PROGRESS').length);
+  pending = computed(() => this.visibleTasks().filter(t => t.status === 'PENDING').length);
+  completionRate = computed(() => this.visibleTasks().length ? Math.round(this.completed() * 100 / this.visibleTasks().length) : 0);
+  recentTasks = computed(() => [...this.visibleTasks()].sort((a,b) => b.id - a.id).slice(0,6));
   recentProjects = computed(() => [...this.projects()].sort((a,b) => b.id - a.id).slice(0,4));
   upcoming = computed(() => {
     const today = new Date().toISOString().slice(0,10);
-    return this.tasks().filter(t => t.dueDate && t.dueDate >= today && t.status !== 'COMPLETED')
+    return this.visibleTasks().filter(t => t.dueDate && t.dueDate >= today && t.status !== 'COMPLETED')
       .sort((a,b) => (a.dueDate || '').localeCompare(b.dueDate || '')).slice(0,5);
   });
   overdue = computed(() => {
     const today = new Date().toISOString().slice(0,10);
-    return this.tasks().filter(t => t.dueDate && t.dueDate < today && t.status !== 'COMPLETED').length;
+    return this.visibleTasks().filter(t => t.dueDate && t.dueDate < today && t.status !== 'COMPLETED').length;
   });
-  private projectService = inject(ProjectService);
-  private categoryService = inject(CategoryService);
-  private taskService = inject(TaskService);
 
   ngOnInit(): void { this.load(); }
   load(): void {
