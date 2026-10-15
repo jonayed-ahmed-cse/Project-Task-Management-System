@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../core/utils/http-error';
 
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -83,6 +84,21 @@ export class Projects implements OnInit {
     ]
   });
 
+
+  /** Called by the route guard before leaving a create/edit form. */
+  canLeave(): boolean {
+    return !this.formMode || !this.form.dirty || this.saving() ||
+      window.confirm('You have unsaved changes. Leave this page and discard them?');
+  }
+
+  fieldError(field: string): string {
+    const control = this.form.get(field);
+    if (!control || !(control.touched || control.dirty) || !control.invalid) return '';
+    if (control.hasError('required') || control.hasError('min')) return 'This field is required.';
+    if (control.hasError('maxlength')) return `Maximum ${control.getError('maxlength').requiredLength} characters allowed.`;
+    return 'Please enter a valid value.';
+  }
+
   ngOnInit(): void {
     this.loadProjects();
   }
@@ -113,7 +129,7 @@ export class Projects implements OnInit {
         console.error('Project API error:', error);
 
         this.errorMessage.set(
-          error.error?.message || 'Failed to load projects'
+          apiErrorMessage(error, 'Failed to load projects')
         );
 
         this.loading.set(false);
@@ -179,6 +195,7 @@ export class Projects implements OnInit {
         );
 
         this.resetForm();
+        this.form.markAsPristine();
         this.saving.set(false);
         this.router.navigate(['/projects']);
       },
@@ -186,7 +203,7 @@ export class Projects implements OnInit {
         console.error('Failed to save project:', error);
 
         this.errorMessage.set(
-          error.error?.message || 'Failed to save project'
+          apiErrorMessage(error, 'Failed to save project')
         );
 
         this.saving.set(false);
@@ -248,7 +265,7 @@ export class Projects implements OnInit {
         console.error('Failed to delete project:', error);
 
         this.errorMessage.set(
-          error.error?.message || 'Failed to delete project'
+          apiErrorMessage(error, 'Failed to delete project')
         );
 
         this.deletingId.set(null);

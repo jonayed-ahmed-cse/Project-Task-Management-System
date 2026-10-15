@@ -1,0 +1,108 @@
+
+<section class="categories-page">
+
+  <h1>Category Management</h1>
+  <p>Create and manage task categories.</p>
+
+  <div *ngIf="errorMessage()" class="alert error">
+    {{ errorMessage() }}
+  </div>
+
+  <div *ngIf="successMessage()" class="alert success">
+    {{ successMessage() }}
+  </div>
+
+  @if (formMode()) {
+<div class="editor-toolbar"><a routerLink="/categories" class="back-link">← Back to Categories</a><h2>{{ editingId() === null ? "Create Category" : "Edit Category" }}</h2></div>
+  <div class="card">
+    <h2>{{ editingId() === null ? 'Add Category' : 'Edit Category' }}</h2>
+
+    <form (ngSubmit)="saveCategory()" [formGroup]="form">
+
+      <div class="form-grid">
+        <label>
+          Category Name *
+          <input
+            formControlName="name"
+            placeholder="Development"
+            type="text">
+        </label>
+
+        <label>
+          Description
+          <input
+            formControlName="description"
+            placeholder="Category description"
+            type="text">
+        </label>
+      </div>
+
+      <div class="actions">
+        <button [disabled]="saving()" type="submit">
+          {{ editingId() === null ? 'Create Category' : 'Update Category' }}
+        </button>
+
+        <button (click)="routerNavigateToList()"
+                class="secondary"
+                type="button">
+          Cancel / Reset
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  } @else {
+<div class="listing-toolbar">
+  <div><h2>All Categories</h2><p>Manage and organize your categories.</p></div>
+  <a class="new-record-btn" routerLink="/categories/new">+ New Category</a>
+</div>
+<div class="listing-filters"><label>Search
+  <input #queryInput type="search" placeholder="Search records..." [value]="search()" (input)="search.set(queryInput.value)" />
+</label></div>
+  <div class="card">
+    <h2>All Categories</h2>
+
+    <p *ngIf="loading()">Loading...</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr *ngFor="let category of filteredItems()">
+          <td>{{ category.id }}</td>
+          <td>{{ category.name }}</td>
+          <td>{{ category.description || '-' }}</td>
+          <td>
+            <button (click)="editCategory(category)"
+                    class="small"
+                    type="button">
+              Edit
+            </button>
+
+            <button (click)="deleteCategory(category.id)"
+                    class="small danger"
+                    type="button">
+              Delete
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="!loading() && filteredItems().length === 0">
+          <td colspan="4">No categories found.</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  }
+</section>

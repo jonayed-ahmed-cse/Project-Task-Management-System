@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../core/utils/http-error';
 
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -49,6 +50,21 @@ export class Categories implements OnInit {
     description: ['', Validators.maxLength(255)]
   });
 
+
+  /** Called by the route guard before leaving a create/edit form. */
+  canLeave(): boolean {
+    return !this.formMode || !this.form.dirty || this.saving() ||
+      window.confirm('You have unsaved changes. Leave this page and discard them?');
+  }
+
+  fieldError(field: string): string {
+    const control = this.form.get(field);
+    if (!control || !(control.touched || control.dirty) || !control.invalid) return '';
+    if (control.hasError('required') || control.hasError('min')) return 'This field is required.';
+    if (control.hasError('maxlength')) return `Maximum ${control.getError('maxlength').requiredLength} characters allowed.`;
+    return 'Please enter a valid value.';
+  }
+
   ngOnInit(): void {
     this.loadCategories();
   }
@@ -69,7 +85,7 @@ export class Categories implements OnInit {
         console.error('Category API error:', error);
 
         this.errorMessage.set(
-          error.error?.message || 'Failed to load categories'
+          apiErrorMessage(error, 'Failed to load categories')
         );
 
         this.loading.set(false);
@@ -87,7 +103,7 @@ export class Categories implements OnInit {
 
     const request: CategoryRequest = {
       name: value.name.trim(),
-      description: value.description || null
+      description: value.description.trim() || null
     };
 
     if (!request.name) {
@@ -114,12 +130,13 @@ export class Categories implements OnInit {
         );
 
         this.resetForm();
+        this.form.markAsPristine();
         this.saving.set(false);
         this.router.navigate(['/categories']);
       },
       error: (error) => {
         this.errorMessage.set(
-          error.error?.message || 'Failed to save category'
+          apiErrorMessage(error, 'Failed to save category')
         );
         this.saving.set(false);
       }
@@ -155,7 +172,7 @@ export class Categories implements OnInit {
       error: (error) => {
         this.deletingId.set(null);
         this.errorMessage.set(
-          error.error?.message || 'Failed to delete category'
+          apiErrorMessage(error, 'Failed to delete category')
         );
       }
     });
